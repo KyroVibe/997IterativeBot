@@ -16,7 +16,7 @@ public class Robot extends IterativeRobot {
   public static Drivetrain kDrivetrain;
   public static Elevator kElevator;
 
-  public static Joystick kGamepad1;
+  public static Joystick kGamepad1, kGamepad2;
 
   private double m_lastTime = 0;
   public static double kDeltaTime = 0;
@@ -32,6 +32,7 @@ public class Robot extends IterativeRobot {
     kElevator = new Elevator();
 
     kGamepad1 = new Joystick(0);
+    kGamepad2 = new Joystick(1);
 
     m_chooser.setDefaultOption("Default Auto", kDefaultAuto);
     m_chooser.addOption("My Auto", kCustomAuto);

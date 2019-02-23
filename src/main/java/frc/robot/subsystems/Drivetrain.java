@@ -14,8 +14,11 @@ import com.ctre.phoenix.motorcontrol.StatusFrameEnhanced;
 import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix.motorcontrol.can.VictorSPX;
 
+import edu.wpi.first.wpilibj.AnalogInput;
+import edu.wpi.first.wpilibj.Solenoid;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.Robot;
+import frc.robot.RobotMap;
 
 /**
  * Add your docs here.
@@ -27,14 +30,22 @@ public class Drivetrain {
 
   private TalonSRX m_leftMaster, m_rightMaster;
   private VictorSPX m_leftFollowerOne, m_leftFollowerTwo, m_rightFollowerOne, m_rightFollowerTwo;
+  private AnalogInput m_infaredBottom;
+  private Solenoid m_liftGear;
+
+  //#region Teleop Data
+
+  private boolean liftgearExtended = false;
+
+  //#endregion
 
   public Drivetrain() {
-    m_leftMaster = new TalonSRX(4);
-    m_rightMaster = new TalonSRX(1);
-    m_leftFollowerOne = new VictorSPX(5);
-    m_leftFollowerTwo = new VictorSPX(6);
-    m_rightFollowerOne = new VictorSPX(2);
-    m_rightFollowerTwo = new VictorSPX(3);
+    m_leftMaster = new TalonSRX(RobotMap.Ports.leftTalon);
+    m_rightMaster = new TalonSRX(RobotMap.Ports.rightTalon);
+    m_leftFollowerOne = new VictorSPX(RobotMap.Ports.leftVictor1);
+    m_leftFollowerTwo = new VictorSPX(RobotMap.Ports.leftVictor2);
+    m_rightFollowerOne = new VictorSPX(RobotMap.Ports.rightVictor1);
+    m_rightFollowerTwo = new VictorSPX(RobotMap.Ports.rightVictor2);
 
     m_leftFollowerOne.follow(m_leftMaster);
     m_leftFollowerTwo.follow(m_leftMaster);
@@ -68,16 +79,55 @@ public class Drivetrain {
 
     m_leftMaster.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 40, 5);
     m_rightMaster.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 40, 5);
+
+    m_liftGear = new Solenoid(RobotMap.Ports.liftGearSolenoid); // Not sure if thats the right id
+
+    m_infaredBottom = new AnalogInput(RobotMap.Ports.bellyPanInfared);
   }
 
+  public void teleopPeriodic() {
+    double arcadeY = Robot.kGamepad1.getRawAxis(1);
+    double arcadeX = Robot.kGamepad1.getRawAxis(0);
+
+    arcadeDrive(arcadeY, arcadeX);
+
+    if (m_infaredBottom.getVoltage() < 0.4 && !liftgearExtended) {
+      liftgearExtended = true;
+    }
+
+    if (liftgearExtended) {
+      if (m_infaredBottom.getVoltage() > 0.95) {
+        setLiftgear(false);
+        liftgearExtended = false;
+      }
+    }
+
+    if (Robot.kGamepad1.getRawButton(RobotMap.Buttons.buttonB) && !m_liftGear.get()) {
+      setLiftgear(true);
+    } else if (Robot.kGamepad1.getRawButton(RobotMap.Buttons.buttonY)) {
+      setLiftgear(false);
+    }
+  }
+
+  //#region Operator Functions
+
+  /**
+   * Set the forward and turn varibles for the drivetrain. By default it is limited to
+   * to the power acceleration of [ramp] per seconds ^2
+   * @param Y The forwards and backwards power
+   * @param X The turn power. This varible isn't limited by power accel
+   */
   public void arcadeDrive(double Y, double X) {
 
     double newY = Y;
 
-    double maxIncrement = Robot.deltaTime * ramp;
+    prevY = (m_leftMaster.getMotorOutputPercent() + m_rightMaster.getMotorOutputPercent()) / 2;
 
-    if (Y > prevY + maxIncrement){
-      newY = prevY + maxIncrement;
+    double maxIncrement = Robot.kDeltaTime * ramp;
+
+    if (Math.abs(Y - prevY) > maxIncrement){
+      double sign = (Y - prevY) / Math.abs(Y - prevY);
+      newY = (maxIncrement * sign) + prevY;
     }
 
     m_leftMaster.set(ControlMode.Current, bound(1, -1, newY + X));
@@ -86,16 +136,41 @@ public class Drivetrain {
     prevY = newY;
   }
 
+  /**
+   * Set the power for each side of the drivetrain individually.
+   * @param left Power for the left side
+   * @param right Power for the right side
+   */
   public void tankDrive(double left, double right) {
     m_leftMaster.set(ControlMode.Current, bound(1, -1, left));
     m_rightMaster.set(ControlMode.Current, bound(1, -1, right));
   }
 
-  public void teleopPeriodic() {
-    
+  /**
+   * Toggles the liftgear's state
+   * @return The new state of the liftgear
+   */
+  public boolean toggleLiftgear() {
+    if (m_liftGear.get()) {
+      m_liftGear.set(false);
+    } else {
+      m_liftGear.set(true);
+    }
+
+    return m_liftGear.get();
   }
 
-  // Utility Functions
+  /**
+   * Set the state of the liftgear
+   * @param s True for engaged and False for disengaged
+   */
+  public void setLiftgear(boolean s) {
+    m_liftGear.set(s);
+  }
+
+  //#endregion
+
+  //#region Utility Functions
 
   public double getLeftEncoder() {
     return m_leftMaster.getSelectedSensorPosition(0);
@@ -141,11 +216,17 @@ public class Drivetrain {
     }
   }
 
+  //#endregion
+
+  //#region Data Management
+
   public void updateSmartDashboard() {
     SmartDashboard.putNumber("Drivetrain Left Pos", getLeftEncoder());
     SmartDashboard.putNumber("Drivetrain Right Pos", getRightEncoder());
     SmartDashboard.putNumber("Drivetrain Left Velo", getLeftVelocity());
     SmartDashboard.putNumber("Drivetrain Right Velo", getRightVelocity());
   }
+
+  //#endregion
 
 }
