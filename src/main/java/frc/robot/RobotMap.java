@@ -7,17 +7,28 @@ public class RobotMap {
     public static final int
       leftTalon = 4, rightTalon = 1, leftVictor1 = 5,
       leftVictor2 = 6, rightVictor1 = 2, rightVictor2 = 3,
-      liftGearSolenoid = 1, bellyPanInfared = 1, masterSpark = 42,
+      liftGearSolenoid = 0, bellyPanInfared = 1, masterSpark = 42,
       followerSpark = 43, armSpark = 53, elevatorCANifier = 23,
-      armCANifier = 29;
+      armCANifier = 29, discBrakeSolenoid = 2;
 
   }
 
-  public class Buttons {
+  public class XboxButtons {
 
     public static final int
       buttonA = 1, buttonB = 2, buttonX = 3,
       buttonY = 4, buttonLeftBumper = 5, buttonRightBumper = 6; // left and right might be reversed
+
+  }
+
+  public class PsButtons {
+
+    public static final int
+      square = 1, x = 2, circle = 3,
+      triangle = 4, L1 = 5, R1 = 6,
+      L2 = 7, R2 = 8, share = 9,
+      options = 10, L3 = 11, R3 = 12,
+      home = 13, touchPad = 14;
 
   }
 

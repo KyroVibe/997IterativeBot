@@ -31,7 +31,7 @@ public class Drivetrain {
   private TalonSRX m_leftMaster, m_rightMaster;
   private VictorSPX m_leftFollowerOne, m_leftFollowerTwo, m_rightFollowerOne, m_rightFollowerTwo;
   private AnalogInput m_infaredBottom;
-  private Solenoid m_liftGear;
+  private Solenoid m_liftgear;
 
   //#region Teleop Data
 
@@ -80,7 +80,7 @@ public class Drivetrain {
     m_leftMaster.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 40, 5);
     m_rightMaster.setStatusFramePeriod(StatusFrameEnhanced.Status_2_Feedback0, 40, 5);
 
-    m_liftGear = new Solenoid(RobotMap.Ports.liftGearSolenoid); // Not sure if thats the right id
+    m_liftgear = new Solenoid(RobotMap.Ports.liftGearSolenoid); // Not sure if thats the right id
 
     m_infaredBottom = new AnalogInput(RobotMap.Ports.bellyPanInfared);
   }
@@ -102,9 +102,9 @@ public class Drivetrain {
       }
     }
 
-    if (Robot.kGamepad1.getRawButton(RobotMap.Buttons.buttonB) && !m_liftGear.get()) {
+    if (Robot.kGamepad1.getRawButton(RobotMap.PsButtons.circle) && !m_liftgear.get()) {
       setLiftgear(true);
-    } else if (Robot.kGamepad1.getRawButton(RobotMap.Buttons.buttonY)) {
+    } else if (Robot.kGamepad1.getRawButton(RobotMap.PsButtons.triangle)) {
       setLiftgear(false);
     }
   }
@@ -151,13 +151,8 @@ public class Drivetrain {
    * @return The new state of the liftgear
    */
   public boolean toggleLiftgear() {
-    if (m_liftGear.get()) {
-      m_liftGear.set(false);
-    } else {
-      m_liftGear.set(true);
-    }
-
-    return m_liftGear.get();
+    m_liftgear.set(!m_liftgear.get());
+    return m_liftgear.get();
   }
 
   /**
@@ -165,7 +160,7 @@ public class Drivetrain {
    * @param s True for engaged and False for disengaged
    */
   public void setLiftgear(boolean s) {
-    m_liftGear.set(s);
+    m_liftgear.set(s);
   }
 
   //#endregion

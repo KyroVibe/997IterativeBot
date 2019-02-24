@@ -30,7 +30,6 @@ public class Elevator {
 
   private CANSparkMax m_master, m_follower;
   private CANEncoder m_encoder;
-
   private CANPIDController m_pidController;
   private CANDigitalInput m_limitSwitchTop;
   private CANDigitalInput m_limitSwitchBottom;
@@ -54,6 +53,7 @@ public class Elevator {
     MidFrontCargo(RobotMap.Values.elevatorFrontMiddleCargoHeight),
     HighFrontCargo(RobotMap.Values.elevatorFrontTopCargoHeight),
     ShipBackHatch(RobotMap.Values.elevatorBackShipHatchHeight),
+    ShipBackCargo(RobotMap.Values.elevatorBackShipCargoHeight),
     LowBackCargo(RobotMap.Values.elevatorBackBottomCargoHeight),
     MidBackCargo(RobotMap.Values.elevatorBackMiddleCargoHeight),
     HighBackCargo(RobotMap.Values.elevatorBackTopCargoHeight),
@@ -82,6 +82,34 @@ public class Elevator {
       }
 
       return a;
+    }
+  }
+
+  public enum POVState {
+    FrontCargo(0), BackCargo(270), FrontHatch(90),
+    BackHatch(180), Idle(-1);
+
+    private int value;
+
+    private POVState(int value) {
+      this.value = value;
+    }
+
+    public int getValue() { return value; }
+
+    public static POVState getState(int value) {
+      switch (value) {
+        case 0:
+          return POVState.FrontCargo;
+        case 270:
+          return POVState.BackCargo;
+        case 90:
+          return POVState.FrontHatch;
+        case 180:
+          return POVState.BackHatch;
+        default:
+          return POVState.Idle;
+      }
     }
   }
 
@@ -123,24 +151,23 @@ public class Elevator {
 
   public void teleopPeriodic() {
     // Manual Control. Accidently named it teleop but I'm too lazy to change it... WHOOP
-    if (Robot.kGamepad2.getRawButton(RobotMap.Buttons.buttonX)) {
-      setSpeed(0.8);
-      wasInTeleop = true;
-    } else if (Robot.kGamepad2.getRawButton(RobotMap.Buttons.buttonY)){
-      setSpeed(-0.3);
-      wasInTeleop = true;
-    } else { // Locks elevator when not using it
-      if (wasInTeleop) {
-        wasInTeleop = false;
-        if (usingInternal) {
-          setpoint = ElevatorSetpoint.getCurrent(true);
-        } else {
-          setpoint = ElevatorSetpoint.getCurrent(false);
+    if (!updateSetpoint()) {
+      if (Robot.kGamepad2.getRawButton(RobotMap.PsButtons.square)) {
+        setSpeed(0.8);
+        wasInTeleop = true;
+      } else if (Robot.kGamepad2.getRawButton(RobotMap.PsButtons.triangle)){
+        setSpeed(-0.3);
+        wasInTeleop = true;
+      } else { // Locks elevator when not using it
+        if (wasInTeleop) {
+          wasInTeleop = false;
+          if (usingInternal) {
+            setpoint = ElevatorSetpoint.getCurrent(true);
+          } else {
+            setpoint = ElevatorSetpoint.getCurrent(false);
+          }
         }
       }
-
-      // Setpoint control
-      // if (Robot.kGame)
 
       if (useSetpoints) { // Moves to new setpoint
         if (usingInternal) {
@@ -153,6 +180,50 @@ public class Elevator {
   }
 
   //#region Operator Functions
+
+  public boolean updateSetpoint() {
+    POVState state = POVState.getState(Robot.kGamepad2.getPOV(0));
+
+    if (state.equals(POVState.FrontCargo)) {
+      if (Robot.kGamepad2.getRawButton(RobotMap.PsButtons.x)) {
+        setpoint = ElevatorSetpoint.ShipFrontCargo;
+      } else if (Robot.kGamepad2.getRawButton(RobotMap.PsButtons.square)) {
+        setpoint = ElevatorSetpoint.LowFrontCargo;
+      } else if (Robot.kGamepad2.getRawButton(RobotMap.PsButtons.triangle)) {
+        setpoint = ElevatorSetpoint.MidFrontCargo;
+      } else if (Robot.kGamepad2.getRawButton(RobotMap.PsButtons.circle)) {
+        setpoint = ElevatorSetpoint.HighFrontCargo;
+      }
+    } else if (state.equals(POVState.FrontHatch)) {
+      if (Robot.kGamepad2.getRawButton(RobotMap.PsButtons.x)) {
+        setpoint = ElevatorSetpoint.LowFrontHatch;
+      } else if (Robot.kGamepad2.getRawButton(RobotMap.PsButtons.square)) {
+        setpoint = ElevatorSetpoint.LowFrontHatch;
+      } else if (Robot.kGamepad2.getRawButton(RobotMap.PsButtons.triangle)) {
+        setpoint = ElevatorSetpoint.MidFrontHatch;
+      } else if (Robot.kGamepad2.getRawButton(RobotMap.PsButtons.circle)) {
+        setpoint = ElevatorSetpoint.HighFrontHatch;
+      }
+    } else if (state.equals(POVState.BackCargo)) {
+      if (Robot.kGamepad2.getRawButton(RobotMap.PsButtons.x)) {
+        setpoint = ElevatorSetpoint.ShipBackCargo;
+      } else if (Robot.kGamepad2.getRawButton(RobotMap.PsButtons.square)) {
+        setpoint = ElevatorSetpoint.LowFrontCargo;
+      } else if (Robot.kGamepad2.getRawButton(RobotMap.PsButtons.triangle)) {
+        setpoint = ElevatorSetpoint.MidFrontCargo;
+      } else if (Robot.kGamepad2.getRawButton(RobotMap.PsButtons.circle)) {
+        setpoint = ElevatorSetpoint.HighFrontCargo;
+      }
+    } else if (state.equals(POVState.BackHatch)) {
+      if (Robot.kGamepad2.getRawButton(RobotMap.PsButtons.x)) {
+        setpoint = ElevatorSetpoint.ShipBackHatch;
+      }
+    } else {
+      return false;
+    }
+
+    return true;
+  }
 
   public void setSpeed(double s) {
     m_master.set(s);
