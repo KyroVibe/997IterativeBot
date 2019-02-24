@@ -52,6 +52,9 @@ public class RobotMap {
       armFrontParallel = 150,
       armVertical = 415,
 
+      elevatorBottomHeight = 0,
+      elevatorTopHeight = 52400,
+
       bottomElevatorAccelPosLimit = 5000,
       bottomElevatorLimitVelocity = -0.15,
       topElevatorAccelPosLimit = 49000,

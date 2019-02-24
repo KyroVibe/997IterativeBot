@@ -40,10 +40,50 @@ public class Elevator {
 
   //#region Teleop Data
 
-  private boolean wasInTeleop = false;
-  private double setpoint = 0;
+  private boolean wasInTeleop = true;
+  private ElevatorSetpoint setpoint;
   private boolean usingInternal = false;
   private boolean useSetpoints = true;
+
+  public enum ElevatorSetpoint {
+    ShipFrontCargo(RobotMap.Values.elevatorFrontShipCargoHeight),
+    LowFrontHatch(RobotMap.Values.elevatorFrontBottomHatchHeight),
+    MidFrontHatch(RobotMap.Values.elevatorFrontMiddleHatchHeight),
+    HighFrontHatch(RobotMap.Values.elevatorFrontTopHatchHeight),
+    LowFrontCargo(RobotMap.Values.elevatorFrontBottomCargoHeight),
+    MidFrontCargo(RobotMap.Values.elevatorFrontMiddleCargoHeight),
+    HighFrontCargo(RobotMap.Values.elevatorFrontTopCargoHeight),
+    ShipBackHatch(RobotMap.Values.elevatorBackShipHatchHeight),
+    LowBackCargo(RobotMap.Values.elevatorBackBottomCargoHeight),
+    MidBackCargo(RobotMap.Values.elevatorBackMiddleCargoHeight),
+    HighBackCargo(RobotMap.Values.elevatorBackTopCargoHeight),
+    Top(RobotMap.Values.elevatorTopHeight),
+    Bottom(RobotMap.Values.elevatorBottomHeight);
+
+    private double setpoint;
+
+    private ElevatorSetpoint(double setpoint) {
+      setSetpoint(setpoint);
+    }
+
+    public double getSetpoint() { return setpoint; }
+
+    public void setSetpoint(double setpoint) {
+      this.setpoint = setpoint;
+    }
+
+    public static ElevatorSetpoint getCurrent(boolean useInternal) {
+      ElevatorSetpoint a = ElevatorSetpoint.Top;
+
+      if (useInternal) {
+        a.setSetpoint(Robot.kElevator.getInternalPosition());
+      } else {
+        a.setSetpoint(Robot.kElevator.getExternalPosition());
+      }
+
+      return a;
+    }
+  }
 
   //#endregion
 
@@ -82,27 +122,31 @@ public class Elevator {
   }
 
   public void teleopPeriodic() {
+    // Manual Control. Accidently named it teleop but I'm too lazy to change it... WHOOP
     if (Robot.kGamepad2.getRawButton(RobotMap.Buttons.buttonX)) {
       setSpeed(0.8);
       wasInTeleop = true;
     } else if (Robot.kGamepad2.getRawButton(RobotMap.Buttons.buttonY)){
       setSpeed(-0.3);
       wasInTeleop = true;
-    } else {
+    } else { // Locks elevator when not using it
       if (wasInTeleop) {
         wasInTeleop = false;
         if (usingInternal) {
-          setpoint = getInternalPosition();
+          setpoint = ElevatorSetpoint.getCurrent(true);
         } else {
-          setpoint = getExternalPosition();
+          setpoint = ElevatorSetpoint.getCurrent(false);
         }
       }
 
-      if (useSetpoints) {
+      // Setpoint control
+      // if (Robot.kGame)
+
+      if (useSetpoints) { // Moves to new setpoint
         if (usingInternal) {
-          setPositionInternal(setpoint);
+          setPositionInternal(setpoint.getSetpoint());
         } else {
-          setPositionExternal(setpoint);
+          setPositionExternal(setpoint.getSetpoint());
         }
       }
     }
@@ -139,11 +183,11 @@ public class Elevator {
   }
 
   public void setPositionInternal(double p) {
-    m_pidController.setReference(p - getInternalPosition(), ControlType.kPosition);
+    m_pidController.setReference(p - getInternalPosition(), ControlType.kDutyCycle);
   }
 
   public void setPositionExternal(double p) {
-    m_pidController.setReference(p - getExternalPosition(), ControlType.kPosition);
+    m_pidController.setReference(p - getExternalPosition(), ControlType.kDutyCycle);
   }
 
   //#endregion
